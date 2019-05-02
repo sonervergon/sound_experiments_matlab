@@ -36,21 +36,28 @@ classdef SpectrumAnalyser
             end
             disp('__________________________________________________________________________'); disp(' ')
         end
-        function this = analyseSpectrum(this)
+        function this = analyseSpectrum(this, startF, marginF)
             freq = this.frequencies;
             amp = this.amplitudes;
+            endsMargin = 50;
+            startF = startF-endsMargin;
+            startF = startF - marginF/2;
+            endF = startF + 60*marginF + endsMargin;
+            endF = endF + marginF/2;
             freq = freq*1000;
-            index = find(freq < 300); index = index(end);
-            endVal = round((length(amp)/this.sampling_frequency) * 6300*2);
+            index = find(freq < startF); 
+            index = index(end);
+            endVal = round((length(amp)/this.sampling_frequency) * endF*2);
             freq = freq(index:endVal);
             amp = amp(index:endVal);
             [amplitudes, frequencies] = findpeaks(amp, freq, 'MinPeakDistance', 0.08*10^3, 'NPeaks', 6, 'MinPeakHeight', max(amp)/4);
             findpeaks(amp, freq, 'MinPeakDistance', 0.1*10^3, 'NPeaks', 6, 'MinPeakHeight', max(amp)/4);
+            title('Single sided frequency spectrum with peaks'); xlabel('Frequency [Hz]'); ylabel('Amplitude')
             this.amplitudes = amplitudes;
             this.frequencies = frequencies;
         end
         function this = calculateFrequencyData(this)
-            NFFT = round(length(this.raw_data));
+            NFFT = length(this.raw_data);
             signal = this.raw_data;
             fs = this.sampling_frequency;
             X = fft(signal, NFFT) / NFFT;
@@ -62,22 +69,29 @@ classdef SpectrumAnalyser
             this.amplitudes = AmpSingel(1 : half+1); 
             this.frequencies = (0:half)*df/10^3;
         end
+        function this = calculateFrequencyDataWindowed(this)
+            NFFT = 2^15 %2^15;
+            signal = this.raw_data;
+            fs = this.sampling_frequency;
+            WINDOW = hanning(NFFT, 'periodic');
+            % WINDOW = ones(size(signal));
+            [pxx, f] = pwelch(signal, WINDOW, [], NFFT, fs);
+            pxx
+            f
+            f = f .* 0.001;
+            this.amplitudes = pxx;
+            this.frequencies = f;
+        end
         function this = plotFreqSpectrum(this)
             plot(this.frequencies, this.amplitudes, 'Marker','none', 'LineWidth', 1.5);
             xlabel('Frequency [kHz]'); ylabel('Amp');
             legendcell = strcat('NFFT = ',string(num2cell(length(this.raw_data))));
-            legend(legendcell)
-            set(gca,'fontsize',20)
-                width=1310;
-                height=750;
-                set(gcf,'units','points','position',[10,10,width,height])
         end
         function this = amplifyActiveFrequencies(this)
             spectrum_data = this.amplitudes;
-            spectrum_mean = mean(spectrum_data);
-            spectrum_data = round(spectrum_data)./spectrum_mean;
+            spectrum_data = abs(spectrum_data);
             spectrum_data(spectrum_data < 0) = 0;
-            this.amplitudes = (spectrum_data)./log10(spectrum_data);
+            this.amplitudes = (10*spectrum_data).*log10(spectrum_data);
         end
         function [amp, freq] = getAmpFreq(this)
             amp = this.amplitudes;
@@ -85,3 +99,8 @@ classdef SpectrumAnalyser
         end
     end
 end
+
+
+
+
+

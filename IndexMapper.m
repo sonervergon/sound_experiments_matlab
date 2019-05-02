@@ -1,20 +1,26 @@
-function [code, str] = IndexMapper(frequencies, returnKey)
+function [code, str] = IndexMapper(frequencies, returnKey, startF, marginF)
   n = 0:9;
   numbers = [n n n n n n];
-  frequencies = round(frequencies, 1);
-  possible_frequencies = (300:100:6300)/1000;
-  indexes = zeros(size(frequencies));
+  frequencies = round(frequencies, 2);
+  amountOfFrequencies = 60;
+  startF = startF;
+  endF = startF+marginF*(amountOfFrequencies-1);
+  endF = endF;
+  possible_frequencies = (startF:marginF:endF)/1000;
+  indexes = [];
+  number = [];
   ii = 1;
   if strcmp(returnKey, 'code')
-    for frequency = frequencies
-      index = find(possible_frequencies == frequency);
-      indexes(ii) = index;
-      ii = ii+1;
+    for ii = 1:length(frequencies)
+      index = find(possible_frequencies == frequencies(ii));
+      if (length(index) == 0)
+        index = 1;
+      end
+      number(ii) = numbers(index);
     end
-    code = strjoin(string(numbers(indexes)));
+    code = strjoin(string(number));
   else
-    A = 300:1000:6000;
-    code = frequencies*100 + A;
+    code = frequencies*marginF + (startF:10*marginF:endF);
     str = strjoin(string(frequencies));
     disp('Code ' + strjoin(string(frequencies)) +' hashed to frequencies:')
     disp(num2str(code))
